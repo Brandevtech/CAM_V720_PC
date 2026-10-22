@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>V720 • Câmera Local</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css?v=5">
+  <style>
+    /* Simplificações e layout enxuto de página única */
+    .single-page-layout {
+      display: grid;
+      grid-template-columns: 1.25fr 1fr;
+      gap: 20px;
+      padding: 20px 24px;
+      flex: 1;
+    }
+    @media (max-width: 1024px) {
+      .single-page-layout {
+        grid-template-columns: 1fr;
+      }
+    }
+    .compact-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 16px;
+    }
+    .sync-status-box {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      background: rgba(0, 229, 255, 0.05);
+      border: 1px solid rgba(0, 229, 255, 0.2);
+      border-radius: var(--radius-sm);
+      padding: 10px 14px;
+      margin-bottom: 12px;
+    }
+    .file-item-clean {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 12px;
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      margin-bottom: 6px;
+      transition: background 0.2s;
+    }
+    .file-item-clean:hover {
+      background: rgba(0, 229, 255, 0.08);
+      border-color: rgba(0, 229, 255, 0.2);
+    }
+  </style>
+</head>
+<body>
+  <div class="app-container">
+    <!-- Header Minimalista -->
+    <header class="app-header">
+      <div class="brand">
+        <div class="brand-logo">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+            <circle cx="12" cy="13" r="4"/>
+          </svg>
+        </div>
+        <div>
+          <h1 style="font-size: 1.15rem; font-weight: 700;">V720 Local</h1>
+        </div>
+      </div>
+
+      <div class="header-status">
+        <div class="status-badge" id="cameraStatusBadge">
+          <span class="status-dot"></span>
+          <span id="cameraStatusText">192.168.169.1</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- PÁGINA ÚNICA -->
+    <main class="single-page-layout">
+      <!-- Coluna Esquerda: Vídeo Ao Vivo e Controles da Câmera -->
+      <section style="display: flex; flex-direction: column; gap: 16px;">
+        <!-- Card de Vídeo -->
+        <div class="video-container" id="videoWrapper" style="aspect-ratio: 4 / 3; min-height: 380px;">
+          <canvas id="cameraCanvas" width="640" height="480"></canvas>
+
+          <!-- Top Overlay: AO VIVO / REPRODUÇÃO -->
+          <div class="video-overlay-top">
+            <div class="stream-pill live" id="livePill">
+              <span class="rec-dot"></span> AO VIVO
+            </div>
+            <div class="cam-timestamp" id="liveTimestamp">00:00:00</div>
+          </div>
+        </div>
+
+        <!-- Barra de Controles de Reprodução (Ativa apenas ao assistir gravação na janela principal) -->
+        <div id="playerControlBar" style="display: none; flex-direction: column; gap: 8px; background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 10px 14px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px;">
+            <div style="display: flex; align-items: center; gap: 6px; min-width: 0;">
+              <span style="font-size: 0.72rem; color: #ff9100; font-weight: 600; text-transform: uppercase;">📼 Reproduzindo:</span>
+              <span id="playerVideoTitle" style="font-size: 0.8rem; font-family: 'JetBrains Mono', monospace; color: #00e5ff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"></span>
+            </div>
+            <button class="btn btn-secondary btn-sm" id="btnClosePlayer" style="padding: 3px 10px; font-size: 0.75rem; white-space: nowrap;">
+              ✕ Voltar ao Vivo
+            </button>
+          </div>
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <button class="btn btn-primary btn-sm" id="btnPlayerPlayPause" style="padding: 4px 12px; font-size: 0.75rem; min-width: 75px;">▶️ Play</button>
+            <input type="range" id="playerTimeline" min="0" max="0" value="0" style="flex: 1; accent-color: #00e5ff; cursor: pointer;">
+            <span id="playerTimeLabel" style="font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; color: var(--text-secondary); white-space: nowrap;">00:00 / 00:00</span>
+            <a id="playerDownloadBtn" href="#" download class="btn btn-secondary btn-sm" style="padding: 4px 10px; font-size: 0.75rem; white-space: nowrap;">💾 Baixar</a>
+          </div>
+        </div>
+
+        <!-- Card: Sensibilidade de Movimento -->
+        <div class="compact-card">
+          <label for="selectMotionSensitivity" style="display: block; font-size: 0.85rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 8px;">
+            Sensibilidade por Movimento (Gravação no MicroSD):
+          </label>
+          <select id="selectMotionSensitivity" class="form-select" style="width: 100%; font-size: 0.85rem; padding: 8px 12px;">
+            <option value="1">1 - Baixa</option>
+            <option value="2">2 - Média</option>
+            <option value="3" selected>3 - Alta (Recomendado)</option>
+          </select>
+          <div id="sdFeedbackMsg" style="font-size: 0.78rem; color: #00e676; margin-top: 8px; font-family: 'JetBrains Mono', monospace; display: none;"></div>
+        </div>
+      </section>
+
+      <!-- Coluna Direita: Gravações Copiadas para o PC & Sincronização em 2º Plano -->
+      <section style="display: flex; flex-direction: column; gap: 16px;">
+        <div class="compact-card" style="display: flex; flex-direction: column; height: 100%;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+            <h3 style="font-size: 0.95rem;">Vídeos Salvos no PC</h3>
+            <span class="badge-tag" id="localFilesCount">0 vídeos</span>
+          </div>
+
+          <!-- Status da Sincronização Sob Demanda -->
+          <div class="sync-status-box">
+            <div style="display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 0;">
+              <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                <span id="syncStatusBadge" style="font-size: 0.8rem; font-weight: 600; color: #00e5ff;">
+                  ✓ Vídeo ao vivo contínuo
+                </span>
+                <span id="syncCorruptedBadge" style="display: none; background: rgba(255, 82, 82, 0.15); color: #ff5252; border: 1px solid rgba(255, 82, 82, 0.3); border-radius: 4px; padding: 1px 6px; font-size: 0.72rem; font-weight: 600;">
+                  🧹 0 corrompidos removidos
+                </span>
+              </div>
+              <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px;">
+                <span id="syncDetailMsg" style="font-size: 0.75rem; color: var(--text-secondary);">
+                  Clique em "Sincronizar Agora" para puxar as gravações do cartão SD.
+                </span>
+                <span id="syncElapsedTime" style="font-size: 0.72rem; color: var(--text-muted); font-family: 'JetBrains Mono', monospace; white-space: nowrap;">
+                  Última sincronização: nenhuma recente
+                </span>
+              </div>
+            </div>
+            <button class="btn btn-primary btn-sm" id="btnSyncNow" style="padding: 6px 12px; font-size: 0.78rem; white-space: nowrap; margin-left: 12px;">
+              Sincronizar Agora
+            </button>
+          </div>
+
+
+
+          <!-- Barra de Ações em Lote dos Vídeos -->
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; padding: 6px 8px; background: rgba(255,255,255,0.03); border: 1px solid var(--border-color); border-radius: var(--radius-sm); font-size: 0.78rem;">
+            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; user-select: none; color: var(--text-secondary); margin: 0;">
+              <input type="checkbox" id="chkSelectAllFiles" style="accent-color: #00e5ff; cursor: pointer; width: 16px; height: 16px;">
+              <span>Selecionar Todos</span>
+            </label>
+            <button class="btn btn-danger btn-sm" id="btnDeleteSelected" style="padding: 3px 10px; font-size: 0.75rem; display: none;" title="Excluir selecionados imediatamente do computador">
+              🗑️ Excluir Selecionados (<span id="selectedCountText">0</span>)
+            </button>
+          </div>
+
+          <!-- Lista de Vídeos Copiados -->
+          <div id="localFilesList" class="local-files-scroll" style="flex: 1; min-height: 250px; max-height: 480px; overflow-y: auto;">
+            <div style="text-align: center; padding: 30px 10px; color: var(--text-muted); font-size: 0.85rem;">
+              Carregando gravações salvas...
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="app.js?v=33"></script>
+</body>
+</html>

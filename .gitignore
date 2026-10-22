@@ -1,0 +1,48 @@
+# ========================================================
+# CAM_V720_PC - .gitignore
+# Mantém estritamente o código de produção (Backend & Frontend)
+# ========================================================
+
+# Dependências
+node_modules/
+package-lock.json.bak
+
+# Logs e arquivos de depuração em disco
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+server.log
+
+# Gravações e mídias locais capturadas pela câmera
+recordings/
+*.avi
+*.mp4
+*.jpg
+*.jpeg
+
+# Arquivos de ambiente e configurações locais
+.env
+.env.local
+.env.*.local
+
+# Sistema Operacional e Cache
+.DS_Store
+Thumbs.db
+ehthumbs.db
+desktop.ini
+
+# IDEs e Ferramentas de Desenvolvimento
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Scripts avulsos de Engenharia Reversa e Probes de Pesquisa
+*.mjs
+test_*.js
+scratch_*.js

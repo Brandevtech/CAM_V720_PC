@@ -1,0 +1,32 @@
+{
+  "name": "cam-v720-pc",
+  "version": "1.0.0",
+  "description": "V720 / A9 Smart Camera PC Client & Local DVR (Reverse Engineered)",
+  "main": "server.js",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Brandev/CAM_V720_PC.git"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "keywords": [
+    "v720",
+    "a9",
+    "camera",
+    "naxclow",
+    "reverse-engineering",
+    "dvr",
+    "mjpeg",
+    "pc-client"
+  ],
+  "author": "Brandev",
+  "license": "MIT",
+  "dependencies": {
+    "aedes": "^1.2.0",
+    "express": "^4.21.2",
+    "ws": "^8.18.0"
+  }
+}
