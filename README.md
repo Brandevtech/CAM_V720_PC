@@ -92,7 +92,7 @@ O hardware da câmera A9 é extremamente enxuto (CPU mononúcleo de ~200 MHz, 8 
 
 1. **Clonar o Repositório:**
    ```bash
-   git clone https://github.com/Brandev/CAM_V720_PC.git
+   git clone https://github.com/Brandevtech/CAM_V720_PC.git
    cd CAM_V720_PC
    ```
 
