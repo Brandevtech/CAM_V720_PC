@@ -278,6 +278,97 @@ function setupEvents() {
   document.getElementById('btnDeleteSelected')?.addEventListener('click', () => {
     window.deleteSelectedVideos();
   });
+
+  // 11. Modal de alteração da pasta de gravação
+  const modalChangeDir = document.getElementById('modalChangeDir');
+  const inputRecordingsDir = document.getElementById('inputRecordingsDir');
+  const modalDirMsg = document.getElementById('modalDirMsg');
+
+  document.getElementById('btnChangeRecordingsDir')?.addEventListener('click', () => {
+    if (!modalChangeDir) return;
+    if (inputRecordingsDir) inputRecordingsDir.value = currentRecordingsDir || '';
+    if (modalDirMsg) {
+      modalDirMsg.style.display = 'none';
+      modalDirMsg.innerText = '';
+    }
+    modalChangeDir.showModal();
+  });
+
+  const closeModal = () => {
+    if (modalChangeDir && modalChangeDir.open) modalChangeDir.close();
+  };
+
+  document.getElementById('btnModalCloseDir')?.addEventListener('click', closeModal);
+  document.getElementById('btnCancelChangeDir')?.addEventListener('click', closeModal);
+
+  document.getElementById('btnSaveChangeDir')?.addEventListener('click', async () => {
+    const newDir = inputRecordingsDir?.value?.trim();
+    if (!newDir) {
+      if (modalDirMsg) {
+        modalDirMsg.style.display = 'block';
+        modalDirMsg.style.color = '#ff1744';
+        modalDirMsg.innerText = 'Por favor, informe um caminho válido.';
+      }
+      return;
+    }
+
+    const btnSave = document.getElementById('btnSaveChangeDir');
+    btnSave.disabled = true;
+    btnSave.innerText = 'Salvando...';
+
+    try {
+      const res = await fetch('/api/config/recordings-dir', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ recordingsDir: newDir })
+      });
+      const data = await res.json();
+      if (data.success) {
+        currentRecordingsDir = data.recordingsDir;
+        const dirText = document.getElementById('currentRecordingsDirText');
+        if (dirText) {
+          dirText.innerText = data.recordingsDir;
+          dirText.title = data.recordingsDir;
+        }
+        closeModal();
+        loadSavedRecordings();
+      } else {
+        if (modalDirMsg) {
+          modalDirMsg.style.display = 'block';
+          modalDirMsg.style.color = '#ff1744';
+          modalDirMsg.innerText = data.error || 'Erro ao alterar pasta.';
+        }
+      }
+    } catch (err) {
+      if (modalDirMsg) {
+        modalDirMsg.style.display = 'block';
+        modalDirMsg.style.color = '#ff1744';
+        modalDirMsg.innerText = `Erro de comunicação: ${err.message}`;
+      }
+    } finally {
+      btnSave.disabled = false;
+      btnSave.innerText = 'Salvar Pasta';
+    }
+  });
+}
+
+let currentRecordingsDir = '';
+
+async function loadRecordingsDir() {
+  const dirText = document.getElementById('currentRecordingsDirText');
+  try {
+    const res = await fetch('/api/config/recordings-dir');
+    const data = await res.json();
+    if (data.success && data.recordingsDir) {
+      currentRecordingsDir = data.recordingsDir;
+      if (dirText) {
+        dirText.innerText = data.recordingsDir;
+        dirText.title = data.recordingsDir;
+      }
+    }
+  } catch (err) {
+    console.error('Erro ao carregar diretório de gravações:', err);
+  }
 }
 
 // Formatação de tempo decorrido desde a última sincronização
@@ -411,9 +502,6 @@ async function loadSavedRecordings() {
             <button class="btn btn-primary btn-sm" onclick="playSavedVideo('${file.filename}')" style="padding: 4px 8px; font-size: 0.75rem;">
               ▶ Assistir
             </button>
-            <a href="/api/sd/play/${encodeURIComponent(file.filename)}" download class="btn btn-secondary btn-sm" style="padding: 4px 8px; font-size: 0.75rem;">
-              💾 Baixar
-            </a>
             <button class="btn btn-danger btn-sm" onclick="deleteLocalVideo('${file.filename}')" style="padding: 4px 8px; font-size: 0.75rem;" title="Excluir vídeo do PC">
               🗑️
             </button>
@@ -583,7 +671,6 @@ function renderPlayerFrame(idx, updateTimeline = true) {
 window.playSavedVideo = async function(filename) {
   const bar = document.getElementById('playerControlBar');
   const title = document.getElementById('playerVideoTitle');
-  const downloadLink = document.getElementById('playerDownloadBtn');
   const timeline = document.getElementById('playerTimeline');
 
   pausePlayer();
@@ -593,7 +680,6 @@ window.playSavedVideo = async function(filename) {
 
   if (bar) bar.style.display = 'flex';
   if (title) title.innerText = `Carregando ${filename}...`;
-  if (downloadLink) downloadLink.href = `/api/sd/play/${encodeURIComponent(filename)}`;
 
   // Scroll suave para a janela de vídeo principal
   document.getElementById('videoWrapper')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -632,6 +718,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initPlayer();
   initWebSocket();
   setupEvents();
+  loadRecordingsDir();
   loadSavedRecordings();
 
   // Consulta periódica do status de sincronização e arquivos

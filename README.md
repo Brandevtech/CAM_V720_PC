@@ -34,7 +34,8 @@ flowchart LR
 
 * **🔴 Streaming MJPEG em Tempo Real:** Transmissão de vídeo 640x480 @ 10-15 FPS via WebSocket de baixíssima latência direto em elemento `<canvas>`.
 * **🕒 Calibração de Relógio em Tempo Real:** Sincronização automática do relógio interno da câmera com compensação do fuso horário civil de Brasília (UTC-3). Botão dedicado no cabeçalho do painel para calibração instantânea sob demanda.
-* **📼 Player Unificado de Gravações:** Reprodução dos vídeos salvos diretamente na janela principal de transmissão, com alternador `📼 REPRODUÇÃO`, barra de progresso (timeline), controle Play/Pause e download imediato.
+* **📼 Player Unificado de Gravações:** Reprodução dos vídeos salvos diretamente na janela principal de transmissão, com alternador `📼 REPRODUÇÃO`, barra de progresso (timeline) e controle Play/Pause.
+* **📁 Diretório de Gravações Configurável:** Definição e alteração personalizada da pasta no PC (ex.: `D:\CFTV` ou disco externo) onde os vídeos sincronizados do MicroSD e fotos são armazenados, com persistência automática em `config.json`.
 * **📥 Sincronização Inteligente do MicroSD:**
   * Catálogo de gravações com decodificação de datas e bitmasks de 64 bits para minutos gravados (`Code 400` e `402`).
   * Download direto dos arquivos `.avi` via protocolo binário (`Code 406`).

@@ -10,7 +10,8 @@ import { StaCameraServer } from './lib/staServer.js';
 import { startDnsServer } from './lib/dnsServer.js';
 import { startStunServer } from './lib/stunServer.js';
 import { IceSignalingService } from './lib/iceSignaling.js';
-import { getLocalSavedRecordings, RECORDINGS_DIR, createMjpegAvi } from './lib/sdCardService.js';
+import { getLocalSavedRecordings, createMjpegAvi } from './lib/sdCardService.js';
+import { getRecordingsDir, setRecordingsDir } from './lib/configService.js';
 import { initBackgroundSync, syncState, triggerManualSync, setSyncEnabled, setDeleteAfterDownload, setAutoFormatAfterSync, markAsSynced, clearSyncedHistory } from './lib/backgroundSync.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -615,7 +616,7 @@ app.get('/api/sd/download', async (req, res) => {
     console.log(`[SD API Download] Iniciando download do vídeo ${date} ${hour}:${minute}...`);
 
     const result = await clientWrapper.client.downloadSdCardFile(date, hour, minute);
-    const savePath = path.join(RECORDINGS_DIR, result.fileName);
+    const savePath = path.join(getRecordingsDir(), result.fileName);
     fs.writeFileSync(savePath, result.data);
     console.log(`[SD API Download] Salvo com sucesso em: ${savePath} (${result.size} bytes)`);
 
@@ -706,8 +707,9 @@ app.post('/api/sd/sync', async (req, res) => {
     const sortedDates = [...dates].sort().reverse();
     
     // Obter arquivos locais já salvos no PC
+    const targetDir = getRecordingsDir();
     const localFiles = new Set(
-      fs.readdirSync(RECORDINGS_DIR).map(f => f.toLowerCase())
+      fs.readdirSync(targetDir).map(f => f.toLowerCase())
     );
 
     const synced = [];
@@ -727,7 +729,7 @@ app.post('/api/sd/sync', async (req, res) => {
           if (synced.length >= MAX_FILES_PER_SYNC) break;
 
           const fileName = rec.fileName || `${rec.date}${String(rec.hour).padStart(2,'0')}${String(rec.minute).padStart(2,'0')}.avi`;
-          const savePath = path.join(RECORDINGS_DIR, fileName);
+          const savePath = path.join(targetDir, fileName);
 
           // 1. Se já está no PC com tamanho válido (> 64 KB), apenas apaga da câmera se ainda estiver no cartão
           if (localFiles.has(fileName.toLowerCase()) && fs.existsSync(savePath) && fs.statSync(savePath).size > 64 * 1024) {
@@ -799,10 +801,25 @@ app.post('/api/sd/sync', async (req, res) => {
   }
 });
 
+// Rotas de configuração de diretório de gravações locais
+app.get('/api/config/recordings-dir', (req, res) => {
+  res.json({ success: true, recordingsDir: getRecordingsDir() });
+});
+
+app.post('/api/config/recordings-dir', (req, res) => {
+  const newPath = req.body?.recordingsDir || req.body?.path;
+  try {
+    const updatedDir = setRecordingsDir(newPath);
+    res.json({ success: true, recordingsDir: updatedDir });
+  } catch (err) {
+    res.status(400).json({ success: false, error: err.message });
+  }
+});
+
 // Excluir vídeo local individual do PC (mantém histórico persistente para não re-baixar do SD)
 app.delete('/api/sd/local/:filename', (req, res) => {
   const filename = path.basename(req.params.filename);
-  const filePath = path.join(RECORDINGS_DIR, filename);
+  const filePath = path.join(getRecordingsDir(), filename);
   markAsSynced(filename);
   if (fs.existsSync(filePath)) {
     fs.unlinkSync(filePath);
@@ -816,9 +833,10 @@ app.delete('/api/sd/local/:filename', (req, res) => {
 app.post('/api/sd/local-batch-delete', (req, res) => {
   const { filenames = [] } = req.body;
   let deletedCount = 0;
+  const currentDir = getRecordingsDir();
   for (const fn of filenames) {
     const filename = path.basename(fn);
-    const filePath = path.join(RECORDINGS_DIR, filename);
+    const filePath = path.join(currentDir, filename);
     markAsSynced(filename);
     if (fs.existsSync(filePath)) {
       try {
@@ -849,7 +867,7 @@ app.get('/api/sd/local-recordings', (req, res) => {
 // 7. Streaming / reprodução de arquivo local baixado
 app.get('/api/sd/play/:filename', (req, res) => {
   const filename = path.basename(req.params.filename);
-  const filePath = path.join(RECORDINGS_DIR, filename);
+  const filePath = path.join(getRecordingsDir(), filename);
 
   if (!fs.existsSync(filePath)) {
     return res.status(404).json({ success: false, error: 'Arquivo não encontrado' });
@@ -884,7 +902,7 @@ app.get('/api/sd/play/:filename', (req, res) => {
 // 7.1 Extração de quadros JPEG para reprodução no player web (suporte universal sem codecs)
 app.get('/api/sd/frames/:filename', (req, res) => {
   const filename = path.basename(req.params.filename);
-  const filePath = path.join(RECORDINGS_DIR, filename);
+  const filePath = path.join(getRecordingsDir(), filename);
 
   if (!fs.existsSync(filePath)) {
     return res.status(404).json({ success: false, error: 'Arquivo não encontrado' });
@@ -949,7 +967,7 @@ app.post('/api/dvr/save-video', express.json({ limit: '100mb' }), (req, res) => 
     });
 
     const aviBuf = createMjpegAvi(jpegBuffers, 640, 480, fps);
-    const savePath = path.join(RECORDINGS_DIR, fname);
+    const savePath = path.join(getRecordingsDir(), fname);
     fs.writeFileSync(savePath, aviBuf);
     console.log(`[DVR Local] 🎥 Vídeo salvo com sucesso no PC: ${fname} (${(aviBuf.length / (1024 * 1024)).toFixed(2)} MB, ${frames.length} quadros)`);
 
@@ -981,7 +999,7 @@ app.post('/api/dvr/save-photo', express.json({ limit: '20mb' }), (req, res) => {
 
     const base64Data = data.replace(/^data:image\/\w+;base64,/, '');
     const imgBuf = Buffer.from(base64Data, 'base64');
-    const savePath = path.join(RECORDINGS_DIR, fname);
+    const savePath = path.join(getRecordingsDir(), fname);
     fs.writeFileSync(savePath, imgBuf);
     console.log(`[DVR Local] 📸 Foto salva com sucesso no PC: ${fname} (${(imgBuf.length / 1024).toFixed(1)} KB)`);
 

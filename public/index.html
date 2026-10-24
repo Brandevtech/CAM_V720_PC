@@ -115,7 +115,6 @@
             <button class="btn btn-primary btn-sm" id="btnPlayerPlayPause" style="padding: 4px 12px; font-size: 0.75rem; min-width: 75px;">▶️ Play</button>
             <input type="range" id="playerTimeline" min="0" max="0" value="0" style="flex: 1; accent-color: #00e5ff; cursor: pointer;">
             <span id="playerTimeLabel" style="font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; color: var(--text-secondary); white-space: nowrap;">00:00 / 00:00</span>
-            <a id="playerDownloadBtn" href="#" download class="btn btn-secondary btn-sm" style="padding: 4px 10px; font-size: 0.75rem; white-space: nowrap;">💾 Baixar</a>
           </div>
         </div>
 
@@ -166,7 +165,17 @@
             </button>
           </div>
 
-
+          <!-- Configuração do Diretório de Gravação no PC -->
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; padding: 7px 10px; background: rgba(0, 229, 255, 0.05); border: 1px solid rgba(0, 229, 255, 0.15); border-radius: var(--radius-sm); font-size: 0.78rem; gap: 8px;">
+            <div style="display: flex; align-items: center; gap: 6px; overflow: hidden; min-width: 0;">
+              <span style="font-size: 0.85rem;">📁</span>
+              <span style="color: var(--text-secondary); white-space: nowrap;">Pasta:</span>
+              <span id="currentRecordingsDirText" style="font-family: 'JetBrains Mono', monospace; color: #00e5ff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="">Carregando...</span>
+            </div>
+            <button class="btn btn-secondary btn-sm" id="btnChangeRecordingsDir" style="padding: 2px 8px; font-size: 0.72rem; white-space: nowrap;">
+              ✏️ Alterar
+            </button>
+          </div>
 
           <!-- Barra de Ações em Lote dos Vídeos -->
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; padding: 6px 8px; background: rgba(255,255,255,0.03); border: 1px solid var(--border-color); border-radius: var(--radius-sm); font-size: 0.78rem;">
@@ -190,6 +199,25 @@
     </main>
   </div>
 
-  <script src="app.js?v=34"></script>
+  <!-- Modal para Alterar Diretório de Gravação -->
+  <dialog id="modalChangeDir" style="margin: auto; background: var(--bg-surface); color: var(--text-primary); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 20px; box-shadow: var(--shadow-main); max-width: 520px; width: 90%;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+      <h4 style="font-size: 1rem; margin: 0; display: flex; align-items: center; gap: 6px;">📁 Alterar Pasta de Gravação</h4>
+      <button id="btnModalCloseDir" style="background: none; border: none; color: var(--text-secondary); cursor: pointer; font-size: 1.1rem; padding: 4px;">✕</button>
+    </div>
+    <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 12px; line-height: 1.4;">
+      Informe o caminho absoluto no seu computador onde os vídeos baixados e capturas de tela serão salvos:
+    </p>
+    <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px;">
+      <input type="text" id="inputRecordingsDir" class="form-input" placeholder="Ex: D:\CFTV\Recordings" style="width: 100%; font-family: 'JetBrains Mono', monospace; font-size: 0.82rem;">
+      <div id="modalDirMsg" style="font-size: 0.78rem; font-family: 'JetBrains Mono', monospace; display: none;"></div>
+    </div>
+    <div style="display: flex; justify-content: flex-end; gap: 8px;">
+      <button class="btn btn-secondary btn-sm" id="btnCancelChangeDir">Cancelar</button>
+      <button class="btn btn-primary btn-sm" id="btnSaveChangeDir">Salvar Pasta</button>
+    </div>
+  </dialog>
+
+  <script src="app.js?v=35"></script>
 </body>
 </html>
