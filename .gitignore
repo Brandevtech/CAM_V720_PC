@@ -17,6 +17,7 @@ server.log
 
 # Gravações e mídias locais capturadas pela câmera
 recordings/
+synced_history.json
 *.avi
 *.mp4
 *.jpg

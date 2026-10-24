@@ -45,7 +45,7 @@ Este arquivo define as regras arquiteturais e restrições técnicas permanentes
 * **Proibido Polling Automático Contínuo:** É proibido rodar loops automatizados contínuos de download de arquivos do SD enquanto o vídeo ao vivo está ativo.
   * O chaveamento repetido entre `CLOSE_V` e `START_STREAM` interrompe o streaming ao vivo e força o encoder da câmera a abortar e reiniciar a gravação contínua no cartão físico (gerando clipes corrompidos/picados de 4 segundos).
 * **Modo Operacional Correto:** O vídeo ao vivo opera contínuo com prioridade primária. A sincronização de vídeos do cartão MicroSD para o PC ocorre **sob demanda** (ao clicar em "Sincronizar Agora").
-* **Validação de Integridade e Exclusão Segura:** Arquivos baixados menores que 64 KB ou truncados jamais devem ser gravados como válidos e **nunca** devem ser excluídos do cartão SD. Apenas arquivos transferidos 100% íntegros são removidos do MicroSD via `Code 412` para liberar memória.
+* **Validação de Integridade e Histórico Persistente:** Arquivos baixados menores que 64 KB ou truncados jamais devem ser gravados como válidos. O firmware da câmera A9 em Modo AP Direto ignora comandos de exclusão individual (`Code 412`), mantendo gravação circular contínua por hardware (sobrescrevendo os blocos mais antigos automaticamente quando o cartão enche). Para evitar que vídeos já copiados para o PC ou excluídos pelo usuário sejam rebaixados a cada sincronização, o sistema utiliza um histórico persistente em `synced_history.json`. Formatação completa do cartão físico é realizada via `Code 207`.
 
 ---
 

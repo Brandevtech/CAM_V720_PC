@@ -11,7 +11,7 @@ import { startDnsServer } from './lib/dnsServer.js';
 import { startStunServer } from './lib/stunServer.js';
 import { IceSignalingService } from './lib/iceSignaling.js';
 import { getLocalSavedRecordings, RECORDINGS_DIR, createMjpegAvi } from './lib/sdCardService.js';
-import { initBackgroundSync, syncState, triggerManualSync, setSyncEnabled, setDeleteAfterDownload } from './lib/backgroundSync.js';
+import { initBackgroundSync, syncState, triggerManualSync, setSyncEnabled, setDeleteAfterDownload, setAutoFormatAfterSync, markAsSynced, clearSyncedHistory } from './lib/backgroundSync.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -422,6 +422,17 @@ app.post('/api/command', (req, res) => {
     console.log(`[API Command] Alterando sensibilidade de movimento para nível ${sensitivity}`);
     if (activeLocalClient) activeLocalClient.setMoveAlert(activeCamera.sdMoveMode !== false, sensitivity);
     if (staServer) staServer.setMoveAlert(activeCamera.sdMoveMode !== false, sensitivity);
+  } else if (action === 'sync_time') {
+    console.log('[API Command] Sincronização manual do relógio da câmera com o horário local do PC');
+    if (activeLocalClient) {
+      const timeInfo = activeLocalClient.syncTime();
+      return res.json({
+        success: true,
+        action,
+        timeInfo,
+        cameraState: activeCamera
+      });
+    }
   } else if (action === 'motion_record_sd') {
     const isEnabled = enabled !== false;
     activeCamera.sdMoveMode = isEnabled;
@@ -633,9 +644,10 @@ app.post('/api/sync/trigger', async (req, res) => {
 });
 
 app.post('/api/sync/config', (req, res) => {
-  const { enabled, deleteAfterDownload } = req.body;
+  const { enabled, deleteAfterDownload, autoFormatAfterSync } = req.body;
   if (enabled !== undefined) setSyncEnabled(enabled);
   if (deleteAfterDownload !== undefined) setDeleteAfterDownload(deleteAfterDownload);
+  if (autoFormatAfterSync !== undefined) setAutoFormatAfterSync(autoFormatAfterSync);
   res.json({ success: true, ...syncState });
 });
 
@@ -787,10 +799,11 @@ app.post('/api/sd/sync', async (req, res) => {
   }
 });
 
-// Excluir vídeo local individual do PC (sem confirmação)
+// Excluir vídeo local individual do PC (mantém histórico persistente para não re-baixar do SD)
 app.delete('/api/sd/local/:filename', (req, res) => {
   const filename = path.basename(req.params.filename);
   const filePath = path.join(RECORDINGS_DIR, filename);
+  markAsSynced(filename);
   if (fs.existsSync(filePath)) {
     fs.unlinkSync(filePath);
     res.json({ success: true, message: `Vídeo ${filename} excluído do PC.` });
@@ -799,13 +812,14 @@ app.delete('/api/sd/local/:filename', (req, res) => {
   }
 });
 
-// Excluir lote de vídeos locais do PC (sem confirmação)
+// Excluir lote de vídeos locais do PC (mantém histórico persistente)
 app.post('/api/sd/local-batch-delete', (req, res) => {
   const { filenames = [] } = req.body;
   let deletedCount = 0;
   for (const fn of filenames) {
     const filename = path.basename(fn);
     const filePath = path.join(RECORDINGS_DIR, filename);
+    markAsSynced(filename);
     if (fs.existsSync(filePath)) {
       try {
         fs.unlinkSync(filePath);
@@ -814,6 +828,12 @@ app.post('/api/sd/local-batch-delete', (req, res) => {
     }
   }
   res.json({ success: true, deletedCount });
+});
+
+// Resetar histórico de sincronização caso o usuário queira forçar novo download de tudo
+app.post('/api/sync/history/reset', (req, res) => {
+  clearSyncedHistory();
+  res.json({ success: true, message: 'Histórico de sincronização foi resetado.' });
 });
 
 // 6. Lista de gravações já baixadas e salvas localmente no PC

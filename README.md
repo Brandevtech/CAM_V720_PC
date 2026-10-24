@@ -33,11 +33,13 @@ flowchart LR
 ## ✨ Recursos Principais
 
 * **🔴 Streaming MJPEG em Tempo Real:** Transmissão de vídeo 640x480 @ 10-15 FPS via WebSocket de baixíssima latência direto em elemento `<canvas>`.
+* **🕒 Calibração de Relógio em Tempo Real:** Sincronização automática do relógio interno da câmera com compensação do fuso horário civil de Brasília (UTC-3). Botão dedicado no cabeçalho do painel para calibração instantânea sob demanda.
 * **📼 Player Unificado de Gravações:** Reprodução dos vídeos salvos diretamente na janela principal de transmissão, com alternador `📼 REPRODUÇÃO`, barra de progresso (timeline), controle Play/Pause e download imediato.
 * **📥 Sincronização Inteligente do MicroSD:**
   * Catálogo de gravações com decodificação de datas e bitmasks de 64 bits para minutos gravados (`Code 400` e `402`).
   * Download direto dos arquivos `.avi` via protocolo binário (`Code 406`).
-  * Validação de integridade (rejeição de fragmentos truncados) e exclusão automática do cartão apenas após confirmação no disco (`Code 412`).
+  * **Histórico Persistente (`synced_history.json`):** Previne que vídeos já transferidos sejam baixados repetidamente ao sincronizar, mesmo que o usuário apague os arquivos do computador para liberar espaço em disco.
+  * **Limpeza e Formatação Automática (`Code 207`):** Ao concluir a leitura e constatar que 100% das gravações do cartão estão seguras no PC, formata o MicroSD automaticamente para deixar o cartão limpo e pronto para novos ciclos.
   * Temporizador em tempo real e contador de arquivos gerenciados.
 * **🌙 Controle de Hardware e Sensores:**
   * Chaveamento de visão noturna (LEDs infravermelhos IR).
@@ -79,6 +81,11 @@ O hardware da câmera A9 é extremamente enxuto (CPU mononúcleo de ~200 MHz, 8 
   2. O PC reconecta automaticamente ao Wi-Fi `Nax_...`.
   3. O backend `CAM_V720_PC` retoma a conexão instantaneamente.
 * **Recomendação Definitiva:** Alimentar a câmera via Power Bank USB com função pass-through ou Mini-UPS 5V para evitar desligamentos.
+
+### 6. Relógio Interno (RTC) e Gerenciamento do MicroSD
+* **Sem Bateria de RTC Dedicada:** A câmera A9 não possui chip de relógio em tempo real com bateria de backup. Ao ser reiniciada ou desligada, o contador zera ou resgata a data antiga da memória Flash.
+* **Calibração de Fuso Horário Local:** O firmware processa timestamps com `gmtime()` bruto. O `v720-pc` calcula e compensa automaticamente o deslocamento do fuso horário de Brasília (UTC-3), garantindo que as gravações recebam o nome com a data e o minuto civil corretos.
+* **Inviabilidade do Code 412 (Exclusão Individual):** Em Modo AP Direto, o firmware ignora instruções de exclusão individual (`Code 412`). O sistema utiliza um histórico persistente (`synced_history.json`) para impedir downloads repetidos e formata o MicroSD via comando mestre (`Code 207`) após constatar que 100% dos vídeos estão salvos com integridade no computador.
 
 ---
 
@@ -149,7 +156,8 @@ CAM_V720_PC/
 
 | Código / Comando | Ação | Descrição Técnica |
 | :---: | :---: | :--- |
-| `Code 501` | Handshake | Conexão e sincronização do Unix Timestamp |
+| `Code 501` | Handshake | Conexão inicial e sincronização do timestamp com offset de fuso horário |
+| `Code 4` | Base Info / RTC | Calibração do relógio interno do firmware da câmera (`unixTimer`) |
 | `Code 502 (modo 2)` | `OPEN_V` | Inicia streaming local de vídeo MJPEG via socket TCP |
 | `Code 502 (modo 0)` | `CLOSE_V` | Pausa streaming de vídeo para descarregar o sensor óptico |
 | `Code 400` | Datas do SD | Lista datas com gravações presentes no cartão MicroSD |
@@ -157,7 +165,8 @@ CAM_V720_PC/
 | `Code 404 / 405` | Media Info | Consulta metadados e tamanho exato em bytes de um `.avi` na flash |
 | `Code 406` | Start Stream | Inicia transferência sequencial de blocos do arquivo de vídeo |
 | `Code 411` | Stream End | Pacote JSON emitido pela câmera confirmando término íntegro do arquivo |
-| `Code 412` | Media Delete | Exclui arquivo do cartão MicroSD para liberação de espaço |
+| `Code 412` | Media Delete | Comando teórico de exclusão (ignorado pelo SoC A9 em Modo AP Direto) |
+| `Code 207` | SD Format | Comando mestre de formatação FAT do MicroSD para limpeza total |
 | `cmd 101` / `102` | PING / PONG | Handshake periódico de integridade durante a transmissão de vídeo do SD |
 
 ---

@@ -128,3 +128,21 @@ Quando a câmera sofrer corte de energia e reiniciar sem sinal de rede:
 Para eliminar 100% a necessidade de reset físico em quedas de energia:
 * Alimentar a câmera A9 através de um **Power Bank USB com pass-through charging** ou um **Mini-UPS 5V** (custo ~R$ 40 a R$ 60).
 * Como o consumo da câmera é inferior a 2 Watts, a bateria a mantém ligada continuamente durante quedas de luz, evitando o cold boot e mantendo o Modo AP ininterrupto.
+
+---
+
+## 8. Descobertas Recentes de Engenharia Reversa (Armazenamento, RTC e Sincronização)
+
+### A. Ausência de RTC Físico e Compensação de Fuso Horário Local (UTC-3 Brasília)
+* O microcontrolador da A9 não possui chip RTC com bateria independente. Ao sofrer corte de energia, o relógio volta para a última data/hora gravada na SPI Flash.
+* Em Modo AP Direto, a câmera não possui acesso a servidores NTP públicos. Ela calibra o relógio exclusivamente a partir do campo `unixTimer` nos pacotes `Code 501` (`AP_CONNECT`) e `Code 4` (`BASE_INFO`).
+* O firmware aplica `gmtime()` diretamente no `unixTimer`. Sem compensação, os vídeos ficavam com 3 horas de adiantamento. O `v720-pc` calcula `-now.getTimezoneOffset() * 60` (offset de Brasília) e calibra o relógio perfeitamente com a hora civil local.
+
+### B. Inviabilidade de Exclusão Individual de Arquivos (Code 412)
+* Varreduras de tráfego e testes unitários de injeção direta de pacotes revelaram que o comando `Code 412` é **completamente ignorado** pelo daemon TCP do firmware em modo AP.
+* O firmware não emite o pacote de confirmação `Code 413` e mantém os clusters FAT intactos.
+* O modelo nativo da A9 é **gravação circular contínua (loop recording)**: o chip sobrescreve os blocos mais antigos por hardware quando a partição enche.
+
+### C. Histórico Persistente e Limpeza Mestre via Formatação (Code 207)
+* Para evitar que o `BackgroundSync` baixe os mesmos arquivos em loop infinito (inclusive após o usuário apagá-los do disco do PC), foi introduzido o `synced_history.json`.
+* Ao concluir a varredura completa sob demanda e certificar que 100% dos arquivos do cartão estão salvos no computador sem falhas, o sistema dispara o comando mestre de formatação FAT (`Code 207`), limpando o MicroSD e preparando-o para novas gravações.

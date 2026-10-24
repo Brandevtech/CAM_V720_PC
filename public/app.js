@@ -226,6 +226,33 @@ function setupEvents() {
     }
   });
 
+  // Botão Sincronizar Relógio da Câmera
+  const btnSyncTime = document.getElementById('btnSyncTime');
+  btnSyncTime?.addEventListener('click', async () => {
+    btnSyncTime.disabled = true;
+    const oldText = btnSyncTime.innerHTML;
+    btnSyncTime.innerText = 'Sincronizando...';
+    try {
+      const res = await fetch('/api/command', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'sync_time' })
+      });
+      const data = await res.json();
+      if (data.success && data.timeInfo) {
+        btnSyncTime.innerText = `✓ ${data.timeInfo.localTime.split(' ')[1] || 'Sincronizado'}`;
+      } else {
+        btnSyncTime.innerText = '✓ Sincronizado';
+      }
+    } catch (err) {
+      btnSyncTime.innerText = 'Falha ao sincronizar';
+    }
+    setTimeout(() => {
+      btnSyncTime.disabled = false;
+      btnSyncTime.innerHTML = oldText;
+    }, 3000);
+  });
+
   // 7. Botão Sincronizar Agora
   document.getElementById('btnSyncNow')?.addEventListener('click', async () => {
     const btn = document.getElementById('btnSyncNow');
