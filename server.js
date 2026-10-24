@@ -705,12 +705,6 @@ app.post('/api/sd/sync', async (req, res) => {
 
     // Datas ordenadas da mais recente para a mais antiga (hoje no topo)
     const sortedDates = [...dates].sort().reverse();
-    
-    // Obter arquivos locais já salvos no PC
-    const targetDir = getRecordingsDir();
-    const localFiles = new Set(
-      fs.readdirSync(targetDir).map(f => f.toLowerCase())
-    );
 
     const synced = [];
     const deleted = [];
@@ -729,10 +723,11 @@ app.post('/api/sd/sync', async (req, res) => {
           if (synced.length >= MAX_FILES_PER_SYNC) break;
 
           const fileName = rec.fileName || `${rec.date}${String(rec.hour).padStart(2,'0')}${String(rec.minute).padStart(2,'0')}.avi`;
-          const savePath = path.join(targetDir, fileName);
+          const currentTargetDir = getRecordingsDir();
+          const savePath = path.join(currentTargetDir, fileName);
 
           // 1. Se já está no PC com tamanho válido (> 64 KB), apenas apaga da câmera se ainda estiver no cartão
-          if (localFiles.has(fileName.toLowerCase()) && fs.existsSync(savePath) && fs.statSync(savePath).size > 64 * 1024) {
+          if (fs.existsSync(savePath) && fs.statSync(savePath).size > 64 * 1024) {
             console.log(`[SD Sync] Arquivo ${fileName} já existe no PC com integridade. Apagando da câmera para liberar espaço...`);
             try {
               await clientWrapper.client.deleteSdCardFile(rec.date, rec.hour, rec.minute);
