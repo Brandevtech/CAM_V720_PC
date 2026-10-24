@@ -744,7 +744,6 @@ app.post('/api/sd/sync', async (req, res) => {
             const fileRes = await clientWrapper.client.downloadSdCardFile(rec.date, rec.hour, rec.minute);
             if (fileRes && fileRes.data && fileRes.data.length > 64 * 1024) {
               fs.writeFileSync(savePath, fileRes.data);
-              localFiles.add(fileName.toLowerCase());
               synced.push(fileName);
               console.log(`[SD Sync] Salvo no PC com sucesso: ${fileName} (${fileRes.size} bytes)`);
 
